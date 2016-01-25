@@ -1,0 +1,50 @@
+getwd()
+setwd()
+H<-matrix(readBin("histograms.bin", "double", 640000), 40000, 16)
+#dim(H)
+#rowSums(H)
+### Perform MultinomialEM
+MultinomialEM<-function(H,K,tau)
+{
+  n<-dim(H)[1]
+  A_old<-matrix(nrow = 40000,ncol = K)
+  A_new<-matrix(nrow = 40000,ncol = K)
+  weight<-t(matrix(rep(1/K,K)))
+  centroid<-H[sample(nrow(H),K),] 
+  centroid<-replace(centroid,centroid==0,0.01)
+  #centroid<-centroid/rowSums(centroid)
+  fai<-exp(H%*%t(log(centroid)))
+  delta<-0.05
+  while(delta>tau)
+    {
+  for (i in 1:40000)
+      { for (k in 1:K )
+       {
+  a_i_k<-(fai[i,k]*weight[k])/(fai[i,]%*%t(weight))
+  A_old[i,k]<-a_i_k
+       }
+      }
+  cons<-matrix(rep(1,n))
+  weight<-t(cons)%*%A_old/n
+  b<-t(A_old)%*%H
+  centroid<-b/rowSums(b)
+  fai<-exp(H%*%t(log(centroid)))
+  for (i in 1:40000)
+  { for (k in 1:K )
+  {
+    A_new[i,k]<-(fai[i,k]*weight[k])/(fai[i,]%*%t(weight))
+  }
+  }
+  delta<-norm(A_new-A_old,"O")
+  }
+  m<-vector()
+  for (i in 1:40000)
+  {
+    m[i]<-which.max(A_new[i,] )
+  }
+  p<-image(matrix(m,nrow = 200,ncol = 200))
+  return(p)
+}
+MultinomialEM(H,3,0.01)
+MultinomialEM(H,4,0.01)
+MultinomialEM(H,5,0.01)
